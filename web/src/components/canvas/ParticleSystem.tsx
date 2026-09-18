@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { DimensionKey } from '../../hooks/useDimensionScroll';
@@ -126,6 +126,51 @@ const fragmentShader = /* glsl */ `
   }
 `;
 
+const MAX_PARTICLES = 1_000_000;
+
+// Stable helper to allocate maximum particle buffers once
+const createParticleBuffers = (count: number) => {
+  const pos = new Float32Array(count * 3);
+  const col = new Float32Array(count * 3);
+  const rnd = new Float32Array(count * 3);
+
+  for (let i = 0; i < count; i++) {
+    const i3 = i * 3;
+    // Random sphere distribution
+    const u = Math.random();
+    const v = Math.random();
+    const theta = u * 2.0 * Math.PI;
+    const phi = Math.acos(2.0 * v - 1.0);
+    const r = Math.cbrt(Math.random()) * 8;
+
+    pos[i3] = r * Math.sin(phi) * Math.cos(theta);
+    pos[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+    pos[i3 + 2] = r * Math.cos(phi);
+
+    rnd[i3] = Math.random();
+    rnd[i3 + 1] = Math.random();
+    rnd[i3 + 2] = Math.random();
+
+    // High-tech Cyan/Purple/Orange spectrum
+    const colorMix = Math.random();
+    if (colorMix < 0.6) {
+      col[i3] = 0.0;     // R
+      col[i3 + 1] = 0.97; // G
+      col[i3 + 2] = 1.0;  // B (Cyan)
+    } else if (colorMix < 0.85) {
+      col[i3] = 0.66;    // R
+      col[i3 + 1] = 0.33; // G
+      col[i3 + 2] = 0.97; // B (Purple)
+    } else {
+      col[i3] = 1.0;     // R
+      col[i3 + 1] = 0.47; // G
+      col[i3 + 2] = 0.0;  // B (Solar Flare)
+    }
+  }
+
+  return { positions: pos, colors: col, randoms: rnd };
+};
+
 export const ParticleSystem: React.FC<ParticleSystemProps> = ({
   currentDimension,
   dimensionProgress,
@@ -134,53 +179,14 @@ export const ParticleSystem: React.FC<ParticleSystemProps> = ({
   isAntiGravity,
 }) => {
   const pointsRef = useRef<THREE.Points>(null);
+  const geometryRef = useRef<THREE.BufferGeometry>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
-  const count = tierConfig.particleCount;
+  const elapsedRef = useRef(0);
 
-  // Initialize particle base positions, colors, and random factors
-  const { positions, colors, randoms } = useMemo(() => {
-    const pos = new Float32Array(count * 3);
-    const col = new Float32Array(count * 3);
-    const rnd = new Float32Array(count * 3);
+  // Allocate 1M particle buffers ONCE and keep them forever
+  const buffers = useMemo(() => createParticleBuffers(MAX_PARTICLES), []);
 
-    for (let i = 0; i < count; i++) {
-      const i3 = i * 3;
-      // Random sphere distribution
-      const u = Math.random();
-      const v = Math.random();
-      const theta = u * 2.0 * Math.PI;
-      const phi = Math.acos(2.0 * v - 1.0);
-      const r = Math.cbrt(Math.random()) * 8;
-
-      pos[i3] = r * Math.sin(phi) * Math.cos(theta);
-      pos[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-      pos[i3 + 2] = r * Math.cos(phi);
-
-      rnd[i3] = Math.random();
-      rnd[i3 + 1] = Math.random();
-      rnd[i3 + 2] = Math.random();
-
-      // High-tech Cyan/Purple/Orange spectrum
-      const colorMix = Math.random();
-      if (colorMix < 0.6) {
-        col[i3] = 0.0;     // R
-        col[i3 + 1] = 0.97; // G
-        col[i3 + 2] = 1.0;  // B (Cyan)
-      } else if (colorMix < 0.85) {
-        col[i3] = 0.66;    // R
-        col[i3 + 1] = 0.33; // G
-        col[i3 + 2] = 0.97; // B (Purple)
-      } else {
-        col[i3] = 1.0;     // R
-        col[i3 + 1] = 0.47; // G
-        col[i3 + 2] = 0.0;  // B (Solar Flare)
-      }
-    }
-
-    return { positions: pos, colors: col, randoms: rnd };
-  }, [count]);
-
-  // Static uniforms object created once with calibrated point size to eliminate overdraw
+  // Stable uniforms object created ONCE - never recreated on quality changes
   const uniforms = useMemo(
     () => ({
       uTime: { value: 0 },
@@ -190,20 +196,37 @@ export const ParticleSystem: React.FC<ParticleSystemProps> = ({
       uAntiGravity: { value: 1.0 },
       uPointSize: { value: tierConfig.tier === 'ULTRA' ? 0.035 : 0.045 },
     }),
-    [tierConfig.tier]
+    [] // Empty dependency array: NEVER recreated!
   );
 
-  const startTimeRef = useRef(performance.now());
+  // Update drawRange dynamically whenever particleCount changes without recreating geometry
+  useEffect(() => {
+    if (geometryRef.current) {
+      const activeCount = Math.min(tierConfig.particleCount, MAX_PARTICLES);
+      geometryRef.current.setDrawRange(0, activeCount);
+    }
+  }, [tierConfig.particleCount]);
 
-  // Fast uniform updates in RAF loop - 0 CPU math, 0 buffer re-uploads
-  useFrame(() => {
+  // Update point size uniform when tier changes without recreating uniforms object
+  useEffect(() => {
+    if (materialRef.current) {
+      materialRef.current.uniforms.uPointSize.value = tierConfig.tier === 'ULTRA' ? 0.035 : 0.045;
+    }
+  }, [tierConfig.tier]);
+
+  // Fast uniform updates in RAF loop - 0 CPU math, 0 buffer re-uploads, smooth continuous time
+  useFrame((_, delta) => {
     try {
       if (!materialRef.current) return;
       const u = materialRef.current.uniforms;
-      // Only pause uTime if tier is explicitly STATIC
+
+      // Only pause time advancement in STATIC mode (preserves time position)
       if (tierConfig.tier !== 'STATIC') {
-        u.uTime.value = (performance.now() - startTimeRef.current) * 0.001;
+        const clampedDelta = Math.min(delta, 0.1);
+        elapsedRef.current += clampedDelta;
       }
+
+      u.uTime.value = elapsedRef.current;
       u.uDimension.value = DIMENSION_MAP[currentDimension] ?? 0;
       u.uDimensionProgress.value = dimensionProgress;
       u.uMouse.value.set(mousePos.x, mousePos.y);
@@ -215,18 +238,21 @@ export const ParticleSystem: React.FC<ParticleSystemProps> = ({
 
   return (
     <points ref={pointsRef}>
-      <bufferGeometry>
+      <bufferGeometry
+        ref={geometryRef}
+        drawRange={{ start: 0, count: Math.min(tierConfig.particleCount, MAX_PARTICLES) }}
+      >
         <bufferAttribute
           attach="attributes-position"
-          args={[positions, 3]}
+          args={[buffers.positions, 3]}
         />
         <bufferAttribute
           attach="attributes-color"
-          args={[colors, 3]}
+          args={[buffers.colors, 3]}
         />
         <bufferAttribute
           attach="attributes-aRandom"
-          args={[randoms, 3]}
+          args={[buffers.randoms, 3]}
         />
       </bufferGeometry>
       <shaderMaterial

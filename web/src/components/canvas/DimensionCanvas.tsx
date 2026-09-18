@@ -59,6 +59,12 @@ const FrameLoopWatcher: React.FC<{
   return null;
 };
 
+const GL_CONFIG = {
+  antialias: true,
+  powerPreference: 'high-performance' as const,
+  alpha: true,
+};
+
 export const DimensionCanvas: React.FC<DimensionCanvasProps> = ({
   currentDimension,
   dimensionProgress,
@@ -178,11 +184,7 @@ export const DimensionCanvas: React.FC<DimensionCanvasProps> = ({
       <Canvas
         frameloop={renderState === 'running' ? 'always' : 'never'}
         dpr={tierConfig.dpr}
-        gl={{
-          antialias: tierConfig.tier !== 'LITE' && tierConfig.tier !== 'STATIC',
-          powerPreference: 'high-performance',
-          alpha: true,
-        }}
+        gl={GL_CONFIG}
         onCreated={({ gl }) => {
           const canvas = gl.domElement;
           const handleContextLost = (e: Event) => {

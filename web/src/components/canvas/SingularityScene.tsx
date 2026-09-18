@@ -13,15 +13,17 @@ interface SingularitySceneProps {
 export const SingularityScene: React.FC<SingularitySceneProps> = ({ progress, visible, tierConfig }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
-  const startTimeRef = useRef(performance.now());
+  const elapsedRef = useRef(0);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     try {
       if (!visible || !materialRef.current) return;
-      // Only pause uTime if tier is explicitly STATIC
+      // Only pause uTime advancement if tier is explicitly STATIC
       if (tierConfig?.tier !== 'STATIC') {
-        materialRef.current.uniforms.uTime.value = (performance.now() - startTimeRef.current) * 0.001;
+        const clampedDelta = Math.min(delta, 0.1);
+        elapsedRef.current += clampedDelta;
       }
+      materialRef.current.uniforms.uTime.value = elapsedRef.current;
       materialRef.current.uniforms.uIntensity.value = Math.min(1.0, progress * 1.2);
     } catch (err) {
       console.error('[SingularityScene useFrame error]', err);

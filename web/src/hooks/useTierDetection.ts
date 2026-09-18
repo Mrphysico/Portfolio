@@ -17,7 +17,7 @@ export interface TierConfig {
 
 export const TIER_PRESETS: Record<QualityTier, Omit<TierConfig, 'tier' | 'fps' | 'autoDowngraded'>> = {
   ULTRA: {
-    particleCount: 250_000,
+    particleCount: 1_000_000,
     enablePostProcessing: true,
     enableBloom: true,
     enableSSAO: true,
@@ -26,7 +26,7 @@ export const TIER_PRESETS: Record<QualityTier, Omit<TierConfig, 'tier' | 'fps' |
     useWebGPU: true,
   },
   HIGH: {
-    particleCount: 120_000,
+    particleCount: 500_000,
     enablePostProcessing: true,
     enableBloom: true,
     enableSSAO: false,
@@ -35,7 +35,7 @@ export const TIER_PRESETS: Record<QualityTier, Omit<TierConfig, 'tier' | 'fps' |
     useWebGPU: true,
   },
   BALANCED: {
-    particleCount: 50_000,
+    particleCount: 150_000,
     enablePostProcessing: true,
     enableBloom: true,
     enableSSAO: false,
@@ -44,7 +44,7 @@ export const TIER_PRESETS: Record<QualityTier, Omit<TierConfig, 'tier' | 'fps' |
     useWebGPU: false,
   },
   LITE: {
-    particleCount: 15_000,
+    particleCount: 25_000,
     enablePostProcessing: false,
     enableBloom: false,
     enableSSAO: false,
@@ -53,7 +53,7 @@ export const TIER_PRESETS: Record<QualityTier, Omit<TierConfig, 'tier' | 'fps' |
     useWebGPU: false,
   },
   STATIC: {
-    particleCount: 1_500,
+    particleCount: 2_000,
     enablePostProcessing: false,
     enableBloom: false,
     enableSSAO: false,
