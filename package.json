@@ -1,0 +1,29 @@
+{
+  "name": "arth-jadav-dimensional-portfolio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ARTH JADAV: THE DIMENSIONAL PORTFOLIO - Awwwards-level interactive journey across 0D to 4D",
+  "workspaces": [
+    "web"
+  ],
+  "scripts": {
+    "dev": "npm --workspace=web run dev",
+    "build": "npm --workspace=web run build",
+    "lint": "npm --workspace=web run lint",
+    "test": "npm --workspace=web run test",
+    "preview": "npm --workspace=web run preview",
+    "api:python": "python -m uvicorn api-python.main:app --reload --port 8000",
+    "docker:up": "docker-compose up --build",
+    "docker:down": "docker-compose down"
+  },
+  "keywords": [
+    "creative-coding",
+    "threejs",
+    "webgpu",
+    "4d-mathematics",
+    "tesseract",
+    "portfolio"
+  ],
+  "author": "Arth Jadav <https://github.com/Mrphysico>",
+  "license": "MIT"
+}
