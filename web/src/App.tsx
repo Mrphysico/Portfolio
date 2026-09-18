@@ -11,7 +11,7 @@ import { Chapter2D } from './components/chapters/Chapter2D';
 import { Chapter3D } from './components/chapters/Chapter3D';
 import { Chapter4D } from './components/chapters/Chapter4D';
 import { LanguageGalaxy } from './components/galaxy/LanguageGalaxy';
-import { SingularityContact } from './components/chapters/SingularityContact';
+import { WorkshopSection } from './components/chapters/WorkshopSection';
 import { CommandPalette } from './components/terminal/CommandPalette';
 import { toneAudio } from './components/audio/ToneAudio';
 
@@ -84,7 +84,7 @@ export function App() {
         <Chapter3D />
         <Chapter4D />
         <LanguageGalaxy />
-        <SingularityContact />
+        <WorkshopSection />
       </main>
 
       {/* 6. Interactive Command Palette (Ctrl+K) */}
