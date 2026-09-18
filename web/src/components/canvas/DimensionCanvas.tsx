@@ -62,7 +62,8 @@ const FrameLoopWatcher: React.FC<{
 const GL_CONFIG = {
   antialias: true,
   powerPreference: 'high-performance' as const,
-  alpha: true,
+  alpha: false,
+  preserveDrawingBuffer: true,
 };
 
 export const DimensionCanvas: React.FC<DimensionCanvasProps> = ({
@@ -96,6 +97,10 @@ export const DimensionCanvas: React.FC<DimensionCanvasProps> = ({
 
   // Robust Page Visibility & Window Focus Lifecycle
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).__DIMENSION_CANVAS_MOUNT_COUNT__ =
+        ((window as any).__DIMENSION_CANVAS_MOUNT_COUNT__ || 0) + 1;
+    }
     transitionState('running', 'Component mounted');
 
     const handleVisibilityChange = () => {
@@ -200,13 +205,16 @@ export const DimensionCanvas: React.FC<DimensionCanvasProps> = ({
           canvas.addEventListener('webglcontextrestored', handleContextRestored, false);
         }}
       >
+        {/* Pure deep black space background (#000000) */}
+        <color attach="background" args={['#000000']} />
+
         <PerspectiveCamera makeDefault position={[0, 0, 7.5]} fov={50} />
 
-        {/* Cinematic Multi-Color Space Lighting */}
-        <ambientLight intensity={0.4} />
-        <directionalLight position={[5, 8, 5]} intensity={1.5} color="#00f7ff" />
-        <directionalLight position={[-5, -8, -5]} intensity={1.0} color="#ff7700" />
-        <pointLight position={[0, 0, 2]} intensity={2.0} color="#a855f7" distance={10} />
+        {/* Space Lighting - Warm Starlight & Pure Void */}
+        <ambientLight intensity={0.25} color="#ffffff" />
+        <directionalLight position={[5, 8, 5]} intensity={1.2} color="#fff8ee" />
+        <directionalLight position={[-5, -8, -5]} intensity={0.6} color="#ffe4b5" />
+        <pointLight position={[0, 0, 2]} intensity={0.8} color="#ffedd5" distance={12} />
 
         {/* Diagnostic watcher & telemetry collector */}
         <FrameLoopWatcher tierConfig={tierConfig} renderState={renderState} />

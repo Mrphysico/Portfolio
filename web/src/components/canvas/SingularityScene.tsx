@@ -57,7 +57,7 @@ export const SingularityScene: React.FC<SingularitySceneProps> = ({ progress, vi
       {/* Outer Photon Sphere Ring */}
       <mesh position={[0, 0, 0.02]} rotation={[0, 0, 0]}>
         <ringGeometry args={[0.38, 0.46, 64]} />
-        <meshBasicMaterial color="#00f7ff" transparent opacity={0.7} side={THREE.DoubleSide} />
+        <meshBasicMaterial color="#fff3e0" transparent opacity={0.65} side={THREE.DoubleSide} />
       </mesh>
     </group>
   );

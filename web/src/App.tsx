@@ -56,7 +56,7 @@ export function App() {
   }, []);
 
   return (
-    <div className={`relative min-h-[100dvh] w-full max-w-full bg-void-950 text-slate-100 overflow-x-clip ${theme}`}>
+    <div className={`relative min-h-[100dvh] w-full max-w-full bg-black text-slate-100 overflow-x-clip ${theme}`}>
       {/* 1. 0D Preloader & Singularity Startup */}
       <Preloader0D onComplete={() => setIsPreloaderDone(true)} />
 

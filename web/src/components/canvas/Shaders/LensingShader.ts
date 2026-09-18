@@ -47,12 +47,12 @@ export const BlackHoleLensingShader = {
       // Accretion disk glow
       float diskDist = abs(dist - uAccretionRadius);
       float diskGlow = exp(-diskDist * 28.0) * (0.8 + 0.2 * sin(uTime * 4.0 + dist * 30.0));
-      vec3 diskColor = mix(vec3(1.0, 0.4, 0.05), vec3(0.0, 0.9, 1.0), sin(dist * 20.0 + uTime) * 0.5 + 0.5);
+      vec3 diskColor = mix(vec3(1.0, 0.55, 0.15), vec3(1.0, 0.94, 0.82), sin(dist * 20.0 + uTime * 1.5) * 0.5 + 0.5);
 
       // Outer photon ring
       float photonRing = exp(-abs(dist - uEventHorizon * 1.3) * 60.0) * 1.5;
 
-      vec3 finalColor = diskColor * diskGlow * 1.8 + vec3(1.0, 0.8, 0.9) * photonRing;
+      vec3 finalColor = diskColor * diskGlow * 1.8 + vec3(1.0, 0.92, 0.80) * photonRing;
       gl_FragColor = vec4(finalColor * uIntensity, clamp(diskGlow + photonRing, 0.0, 1.0));
     }
   `

@@ -11,12 +11,12 @@ export interface DimensionState {
 }
 
 export const DIMENSION_BREAKPOINTS: { key: DimensionKey; start: number; end: number }[] = [
-  { key: '0D', start: 0.00, end: 0.14 },
-  { key: '1D', start: 0.14, end: 0.33 },
-  { key: '2D', start: 0.33, end: 0.53 },
-  { key: '3D', start: 0.53, end: 0.73 },
-  { key: '4D', start: 0.73, end: 0.90 },
-  { key: 'Singularity', start: 0.90, end: 1.00 },
+  { key: '0D', start: 0.00, end: 0.15 },
+  { key: '1D', start: 0.15, end: 0.32 },
+  { key: '2D', start: 0.32, end: 0.50 },
+  { key: '3D', start: 0.50, end: 0.68 },
+  { key: '4D', start: 0.68, end: 0.85 },
+  { key: 'Singularity', start: 0.85, end: 1.00 },
 ];
 
 export function useDimensionScroll() {
@@ -96,7 +96,9 @@ export function useDimensionScroll() {
       if (!lenisInstance) return;
       const bp = DIMENSION_BREAKPOINTS.find((b) => b.key === dim);
       if (bp) {
-        const targetScroll = bp.start * (document.documentElement.scrollHeight - window.innerHeight);
+        const targetRatio = dim === '0D' ? 0 : dim === 'Singularity' ? 0.98 : (bp.start + bp.end) / 2;
+        const maxScroll = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+        const targetScroll = targetRatio * maxScroll;
         lenisInstance.scrollTo(targetScroll, { duration: 1.4 });
       }
     },

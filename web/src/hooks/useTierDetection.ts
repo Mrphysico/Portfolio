@@ -110,6 +110,7 @@ export function useTierDetection() {
   const lastStateUpdateRef = useRef<number>(0);
   const lowFpsCountRef = useRef<number>(0);
   const highFpsCountRef = useRef<number>(0);
+  const lastTierChangeTimeRef = useRef<number>(0);
 
   useEffect(() => {
     let animId: number;
@@ -134,8 +135,8 @@ export function useTierDetection() {
 
           setFps((prev) => (Math.abs(prev - avgFps) >= 2 ? avgFps : prev));
 
-          // Real-Time Auto-Quality Governor with Hysteresis
-          if (!isManual) {
+          // Real-Time Auto-Quality Governor with Hysteresis & 3s Minimum Interval
+          if (!isManual && time - lastTierChangeTimeRef.current >= 3000) {
             // Downgrade condition: FPS below 40 for > 2 seconds (~6 checks at 330ms)
             if (avgFps < 40) {
               lowFpsCountRef.current++;
@@ -143,6 +144,7 @@ export function useTierDetection() {
 
               if (lowFpsCountRef.current >= 6) {
                 lowFpsCountRef.current = 0;
+                lastTierChangeTimeRef.current = time;
                 setTier((current) => {
                   const idx = TIER_ORDER.indexOf(current);
                   if (idx > 1) {
@@ -160,6 +162,7 @@ export function useTierDetection() {
 
               if (highFpsCountRef.current >= 30) {
                 highFpsCountRef.current = 0;
+                lastTierChangeTimeRef.current = time;
                 setTier((current) => {
                   const idx = TIER_ORDER.indexOf(current);
                   if (idx < TIER_ORDER.length - 1) {
