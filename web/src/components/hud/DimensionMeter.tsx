@@ -46,7 +46,7 @@ export const DimensionMeter: React.FC<DimensionMeterProps> = ({
     } catch {
       // Ignore
     }
-    return currentDimension === 'Singularity' ? 'bottom-right' : 'bottom-left';
+    return 'bottom-left';
   });
 
   const [position, setPosition] = useState<{ x: number; y: number }>(() => {
@@ -80,10 +80,10 @@ export const DimensionMeter: React.FC<DimensionMeterProps> = ({
 
   // Corner snap positions
   const getCornerClasses = () => {
-    if (cornerSnap === 'top-left') return 'top-20 left-6';
-    if (cornerSnap === 'top-right') return 'top-20 right-6';
-    if (cornerSnap === 'bottom-right') return 'bottom-6 right-6';
-    return 'bottom-6 left-6'; // default bottom-left
+    if (cornerSnap === 'top-left') return 'top-20 left-3 sm:left-6';
+    if (cornerSnap === 'top-right') return 'top-20 right-3 sm:right-6';
+    if (cornerSnap === 'bottom-right') return 'bottom-3 sm:bottom-6 right-3 sm:right-6';
+    return 'bottom-3 sm:bottom-6 left-3 sm:left-6'; // default bottom-left
   };
 
   const handleSnap = (corner: CornerSnap) => {
@@ -134,7 +134,7 @@ export const DimensionMeter: React.FC<DimensionMeterProps> = ({
       style={{
         transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
       }}
-      className={`fixed z-40 flex flex-col gap-2 font-mono text-xs select-none transition-shadow ${getCornerClasses()} ${
+      className={`fixed z-40 flex flex-col gap-2 font-mono text-xs select-none transition-shadow max-w-[calc(100vw-1.5rem)] max-h-[calc(100dvh-5rem)] ${getCornerClasses()} ${
         isDragging ? 'shadow-[0_0_25px_rgba(0,247,255,0.4)]' : ''
       }`}
     >
@@ -179,7 +179,7 @@ export const DimensionMeter: React.FC<DimensionMeterProps> = ({
         </div>
       ) : (
         /* ================= EXPANDED FULL HUD CARD ================= */
-        <div className="glass-panel rounded-xl p-3.5 border border-white/15 shadow-2xl flex flex-col gap-2.5 min-w-[280px] bg-black/85 backdrop-blur-xl">
+        <div className="glass-panel rounded-xl p-3.5 border border-white/15 shadow-2xl flex flex-col gap-2.5 w-full max-w-[320px] bg-black/85 backdrop-blur-xl">
           {/* Header & Drag Handle */}
           <div
             onPointerDown={handlePointerDown}

@@ -115,8 +115,8 @@ Measured on the production build (`npm run preview`) via Chrome DevTools Protoco
    - Replaced heavy CPU `for` loop (500k iterations/frame) and continuous `posAttr.needsUpdate = true` buffer uploads with a custom Three.js `ShaderMaterial`.
    - Morphing between all dimensional targets (0D point, 1D laser, 2D origami plane, 3D space, 4D hypercube, Singularity spiral) and mouse gravity well are computed on the GPU in parallel at zero CPU cost.
    - Point size calibrated to eliminate GPU fill-rate overdraw.
-2. **Dual-Canvas Culling & Offscreen Render Pausing**:
-   - Paused `DimensionCanvas` render loop (`frameloop={currentDimension === 'Singularity' ? 'never' : 'always'}`) when user enters the 3D Workshop scene.
+2. **Dual-Canvas Culling & Visibility Lifecycle**:
+   - `DimensionCanvas` render loop maintains continuous lightweight background animation (`frameloop="always"`) across all chapters including Singularity, managed by a robust visibility state machine that pauses on background tabs (`document.hidden`) and restores on focus.
    - Paused `WorkshopCanvas` (`frameloop={isInView ? 'always' : 'never'}`) via `IntersectionObserver` when scrolled away from the Workshop.
 3. **Route-Level Code-Splitting & Vendor Chunking**:
    - Split chapters into lazy chunks with `React.lazy()` and `Suspense`.

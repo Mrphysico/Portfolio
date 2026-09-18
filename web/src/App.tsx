@@ -56,7 +56,7 @@ export function App() {
   }, []);
 
   return (
-    <div className={`relative min-h-screen bg-void-950 text-slate-100 overflow-x-hidden ${theme}`}>
+    <div className={`relative min-h-[100dvh] w-full max-w-full bg-void-950 text-slate-100 overflow-x-clip ${theme}`}>
       {/* 1. 0D Preloader & Singularity Startup */}
       <Preloader0D onComplete={() => setIsPreloaderDone(true)} />
 
@@ -128,6 +128,24 @@ export function App() {
             onSelectTier={setTier}
           />
         </Suspense>
+      )}
+
+      {/* 7. Static Mode / Reduced Motion Notice */}
+      {tierConfig.tier === 'STATIC' && (
+        <div
+          id="reduced-motion-notice"
+          className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-zinc-950/90 backdrop-blur-md border border-amber-500/40 px-4 py-2 rounded-xl text-xs font-mono text-amber-200 shadow-2xl pointer-events-auto"
+        >
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+          <span>Animations paused (reduced motion / static mode)</span>
+          <button
+            type="button"
+            onClick={() => setTier('BALANCED')}
+            className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400 text-amber-300 font-bold transition-all"
+          >
+            Enable Animations
+          </button>
+        </div>
       )}
     </div>
   );

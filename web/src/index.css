@@ -10,14 +10,30 @@
     --accent-purple: #a855f7;
   }
 
+  *, ::before, ::after {
+    box-sizing: border-box;
+  }
+
   html {
     color-scheme: dark;
     background-color: var(--bg-primary);
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+  }
+
+  body,
+  #root {
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
   }
 
   body {
     @apply antialiased font-sans text-slate-100 bg-void-950;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   /* Custom high-tech scrollbar */
@@ -68,6 +84,9 @@
   .chapter-container {
     content-visibility: auto;
     contain-intrinsic-size: 800px;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: clip;
   }
 }
 

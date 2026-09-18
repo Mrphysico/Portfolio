@@ -116,25 +116,25 @@ export const WorkshopSection: React.FC = () => {
   return (
     <section
       id="chapter-singularity"
-      className="min-h-screen w-full flex flex-col justify-center px-4 sm:px-6 lg:px-12 xl:px-16 relative z-10 pt-32 pb-24 select-none overflow-hidden"
+      className="min-h-[100dvh] w-full max-w-full flex flex-col justify-center px-3 sm:px-6 lg:px-12 xl:px-16 relative z-10 pt-20 sm:pt-24 pb-12 sm:pb-16 select-none overflow-x-clip"
     >
       <div className="max-w-7xl mx-auto w-full">
         {/* ================= HEADER & DIMENSION BADGE ================= */}
-        <div className="mb-8 p-6 rounded-2xl bg-void-950/80 backdrop-blur-md border border-white/10 shadow-xl relative z-20">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 font-mono text-xs mb-3 shadow-[0_0_12px_rgba(0,247,255,0.2)]">
+        <div className="mb-4 sm:mb-6 p-4 sm:p-5 lg:p-6 rounded-2xl bg-void-950/80 backdrop-blur-md border border-white/10 shadow-xl relative z-20">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 font-mono text-xs mb-2 sm:mb-3 shadow-[0_0_12px_rgba(0,247,255,0.2)]">
             <span className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />
             <span>
               {chapter.dimension} // THE WORKSHOP &bull; {chapter.coordinates} &bull; {chapter.title}
             </span>
           </div>
 
-          <h2 className="text-3xl sm:text-5xl lg:text-6xl font-display font-extrabold text-white tracking-tight">
+          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-display font-extrabold text-white tracking-tight">
             The Workshop:{' '}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400">
               Build &amp; Connect
             </span>
           </h2>
-          <p className="mt-2 text-sm sm:text-base text-slate-300 font-display max-w-2xl">
+          <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm md:text-base text-slate-300 font-display max-w-2xl">
             A luminous cyberpunk hardware studio where ideas get compiled and prototypes come to
             life. Inspect the PC rig in full 360°, fasten screws to boot the system, or transmit a
             work order below.
@@ -142,16 +142,16 @@ export const WorkshopSection: React.FC = () => {
         </div>
 
         {/* ================= 3D WORKSHOP & CLIPBOARD FORM GRID ================= */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-10">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start relative z-10">
           {/* Left Column: Movable 3D Workshop Window (7 cols on desktop) */}
           <div className="lg:col-span-7 w-full flex flex-col">
             <MovableWindow
               id="viewport"
               title="THE WORKSHOP // 3D HARDWARE STUDIO"
-              defaultSize={{ width: 720, height: 620 }}
-              minWidth={360}
-              minHeight={420}
-              className="w-full"
+              defaultSize={{ width: 720, height: 600 }}
+              minWidth={280}
+              minHeight={360}
+              className="w-full max-w-full"
             >
               <WorkshopCanvas
                 screwsTightened={screwsTightened}

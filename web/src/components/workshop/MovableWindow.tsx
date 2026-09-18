@@ -20,7 +20,7 @@ export const MovableWindow: React.FC<MovableWindowProps> = ({
   children,
   defaultPosition = { x: 0, y: 0 },
   defaultSize = { width: 720, height: 600 },
-  minWidth = 340,
+  minWidth = 280,
   minHeight = 360,
   className = '',
   headerControls,
@@ -166,8 +166,8 @@ export const MovableWindow: React.FC<MovableWindowProps> = ({
       const dw = e.clientX - resizeStartRef.current.startX;
       const dh = e.clientY - resizeStartRef.current.startY;
 
-      const newWidth = Math.max(minWidth, Math.min(window.innerWidth - 64, resizeStartRef.current.width + dw));
-      const newHeight = Math.max(minHeight, Math.min(900, resizeStartRef.current.height + dh));
+      const newWidth = Math.max(minWidth, Math.min(window.innerWidth - 32, resizeStartRef.current.width + dw));
+      const newHeight = Math.max(minHeight, Math.min(window.innerHeight - 80, resizeStartRef.current.height + dh));
 
       setSize({ width: newWidth, height: newHeight });
     },
@@ -229,15 +229,16 @@ export const MovableWindow: React.FC<MovableWindowProps> = ({
               left: 0,
               right: 0,
               bottom: 0,
-              width: '100vw',
-              height: '100vh',
+              width: '100%',
+              height: '100dvh',
               zIndex: 9999,
               transform: 'none',
             }
           : {
               transform: `translate3d(${position.x}px, ${position.y}px, 0)`,
-              width: `${size.width}px`,
-              height: isMinimized ? 'auto' : `${size.height}px`,
+              width: '100%',
+              maxWidth: `${size.width}px`,
+              height: isMinimized ? 'auto' : `min(${size.height}px, 75dvh)`,
             }
       }
       className={`relative flex flex-col bg-zinc-950/90 backdrop-blur-xl border border-zinc-800/90 rounded-2xl shadow-2xl transition-[width,height,border-color] duration-150 ${

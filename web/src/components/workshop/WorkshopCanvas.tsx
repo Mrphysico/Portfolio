@@ -115,6 +115,28 @@ const CameraController: React.FC<CameraControllerProps> = ({
   return null;
 };
 
+// Responsive Camera FOV adapter for Ultrawide and Mobile viewports
+const ResponsiveCamera: React.FC = () => {
+  const { camera, size } = useThree();
+  useEffect(() => {
+    if (camera instanceof THREE.PerspectiveCamera) {
+      const aspect = size.width / size.height;
+      if (aspect < 1.0) {
+        // Narrow/portrait viewport
+        camera.fov = 55;
+      } else if (aspect > 2.2) {
+        // Ultrawide viewport
+        camera.fov = 36;
+      } else {
+        camera.fov = 42;
+      }
+      camera.updateProjectionMatrix();
+    }
+  }, [camera, size.width, size.height]);
+
+  return null;
+};
+
 export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
   screwsTightened,
   onScrewClick,
@@ -192,12 +214,12 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
   };
 
   return (
-    <div ref={containerRef} className="w-full h-full min-h-[520px] lg:min-h-[640px] relative flex flex-col select-none">
+    <div ref={containerRef} className="w-full h-full min-h-[320px] sm:min-h-[380px] md:min-h-[440px] lg:min-h-[500px] xl:min-h-[540px] relative flex flex-col select-none">
       {/* ================= TOP CONTROLS & CAMERA PRESETS TOOLBAR ================= */}
-      <div className="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+      <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 right-2.5 sm:right-3 z-30 flex flex-wrap items-center justify-between gap-1.5 sm:gap-2 pointer-events-none">
         {/* Left: Camera Preset Quick Buttons */}
-        <div className="flex items-center gap-1 bg-zinc-950/85 backdrop-blur-md p-1 rounded-xl border border-zinc-800 shadow-xl pointer-events-auto">
-          <div className="px-2 py-1 text-[10px] font-mono text-zinc-400 font-bold uppercase flex items-center gap-1 border-r border-zinc-800 mr-1">
+        <div className="flex items-center gap-0.5 sm:gap-1 bg-zinc-950/85 backdrop-blur-md p-1 rounded-xl border border-zinc-800 shadow-xl pointer-events-auto max-w-full overflow-x-auto">
+          <div className="px-1.5 sm:px-2 py-1 text-[10px] font-mono text-zinc-400 font-bold uppercase flex items-center gap-1 border-r border-zinc-800 mr-0.5 sm:mr-1">
             <Camera className="w-3 h-3 text-cyan-400" />
             <span className="hidden sm:inline">Views</span>
           </div>
@@ -214,7 +236,7 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
               key={preset.id}
               type="button"
               onClick={() => setActivePreset(preset.id as CameraPreset)}
-              className={`px-2 py-1 rounded-lg text-[11px] font-mono transition-all flex items-center gap-1 ${
+              className={`px-1.5 sm:px-2 py-1 rounded-lg text-[11px] font-mono transition-all flex items-center gap-1 ${
                 activePreset === preset.id
                   ? 'bg-cyan-500/25 border border-cyan-400 text-cyan-300 font-bold shadow-[0_0_10px_rgba(0,247,255,0.3)]'
                   : 'text-zinc-400 hover:text-white hover:bg-zinc-800/80 border border-transparent'
@@ -222,7 +244,7 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
               title={`Switch camera to ${preset.label}`}
             >
               <preset.icon className="w-3 h-3" />
-              <span>{preset.label}</span>
+              <span className="hidden sm:inline">{preset.label}</span>
             </button>
           ))}
         </div>
@@ -233,7 +255,7 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
           <button
             type="button"
             onClick={() => setIsExploded(!isExploded)}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all flex items-center gap-1.5 ${
+            className={`px-2 sm:px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all flex items-center gap-1.5 ${
               isExploded
                 ? 'bg-purple-500/25 border border-purple-400 text-purple-300 font-bold shadow-[0_0_12px_rgba(168,85,247,0.3)]'
                 : 'text-zinc-400 hover:text-white hover:bg-zinc-800/80 border border-transparent'
@@ -241,7 +263,7 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
             title="Separate PC components in 3D space"
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>Exploded: {isExploded ? 'ON' : 'OFF'}</span>
+            <span className="hidden sm:inline">Exploded: {isExploded ? 'ON' : 'OFF'}</span>
           </button>
 
           {/* 360 Auto-Rotate Toggle */}
@@ -252,7 +274,7 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
               setIsAutoRotate(next);
               if (controlsRef.current) controlsRef.current.autoRotate = next;
             }}
-            className={`px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all flex items-center gap-1.5 ${
+            className={`px-2 sm:px-2.5 py-1 rounded-lg text-[11px] font-mono transition-all flex items-center gap-1.5 ${
               isAutoRotate
                 ? 'bg-cyan-500/25 border border-cyan-400 text-cyan-300 font-bold shadow-[0_0_10px_rgba(0,247,255,0.3)]'
                 : 'text-zinc-400 hover:text-white hover:bg-zinc-800/80 border border-transparent'
@@ -260,7 +282,7 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
             title="Toggle continuous 360° turntable spin"
           >
             <RotateCw className={`w-3.5 h-3.5 ${isAutoRotate ? 'animate-spin' : ''}`} />
-            <span>360° Spin</span>
+            <span className="hidden sm:inline">360° Spin</span>
           </button>
 
           {/* Quality Selector */}
@@ -309,6 +331,7 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
           className="w-full h-full"
         >
           <PerspectiveCamera makeDefault position={[0.2, 0.4, 3.2]} fov={42} />
+          <ResponsiveCamera />
 
           {/* Full 360 Orbit Controls */}
           <OrbitControls
@@ -389,7 +412,7 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
 
         {/* ================= BOTTOM CANVAS OVERLAYS ================= */}
         {/* Compass / Orientation Gizmo */}
-        <div className="absolute bottom-3 right-3 bg-zinc-950/85 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-zinc-800 shadow-xl flex items-center gap-2 pointer-events-none font-mono text-[11px] text-zinc-400">
+        <div className="absolute bottom-2.5 right-2.5 sm:bottom-3 sm:right-3 bg-zinc-950/85 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-zinc-800 shadow-xl flex items-center gap-2 pointer-events-none font-mono text-[11px] text-zinc-400 z-20">
           <div
             ref={compassArrowRef}
             className="w-4 h-4 rounded-full border border-cyan-400/50 flex items-center justify-center text-[8px] font-bold text-cyan-300"
@@ -400,10 +423,10 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
           <span ref={compassTextRef}>0° YAW</span>
         </div>
 
-        {/* Orbit & Interaction Hint (Always 100% visible, never covered by HUD) */}
-        <div className="absolute bottom-3 left-3 px-3 py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-zinc-800 text-[11px] font-mono text-zinc-300 pointer-events-none flex items-center gap-2 shadow-lg">
-          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" />
-          <span>Drag to orbit 360° &bull; Scroll to zoom &bull; Click screws to fasten</span>
+        {/* Orbit & Interaction Hint (Always visible, never covered by HUD) */}
+        <div className="absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl bg-black/80 backdrop-blur-md border border-zinc-800 text-[10px] sm:text-[11px] font-mono text-zinc-300 pointer-events-none flex items-center gap-1.5 sm:gap-2 shadow-lg max-w-[calc(100%-90px)] truncate z-20">
+          <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse shrink-0" />
+          <span className="truncate">Drag to orbit 360° &bull; Scroll to zoom &bull; Click screws to fasten</span>
         </div>
       </div>
     </div>

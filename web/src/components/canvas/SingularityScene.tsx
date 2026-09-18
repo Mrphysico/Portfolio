@@ -2,20 +2,30 @@ import React, { useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { BlackHoleLensingShader } from './Shaders/LensingShader';
+import { TierConfig } from '../../hooks/useTierDetection';
 
 interface SingularitySceneProps {
   progress: number;
   visible: boolean;
+  tierConfig?: TierConfig;
 }
 
-export const SingularityScene: React.FC<SingularitySceneProps> = ({ progress, visible }) => {
+export const SingularityScene: React.FC<SingularitySceneProps> = ({ progress, visible, tierConfig }) => {
   const meshRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
+  const startTimeRef = useRef(performance.now());
 
-  useFrame((state) => {
-    if (!visible || !materialRef.current) return;
-    materialRef.current.uniforms.uTime.value = state.clock.getElapsedTime();
-    materialRef.current.uniforms.uIntensity.value = Math.min(1.0, progress * 1.2);
+  useFrame(() => {
+    try {
+      if (!visible || !materialRef.current) return;
+      // Only pause uTime if tier is explicitly STATIC
+      if (tierConfig?.tier !== 'STATIC') {
+        materialRef.current.uniforms.uTime.value = (performance.now() - startTimeRef.current) * 0.001;
+      }
+      materialRef.current.uniforms.uIntensity.value = Math.min(1.0, progress * 1.2);
+    } catch (err) {
+      console.error('[SingularityScene useFrame error]', err);
+    }
   });
 
   if (!visible) return null;

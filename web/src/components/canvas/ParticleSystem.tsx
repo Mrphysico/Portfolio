@@ -193,15 +193,24 @@ export const ParticleSystem: React.FC<ParticleSystemProps> = ({
     [tierConfig.tier]
   );
 
+  const startTimeRef = useRef(performance.now());
+
   // Fast uniform updates in RAF loop - 0 CPU math, 0 buffer re-uploads
-  useFrame((state) => {
-    if (!materialRef.current) return;
-    const u = materialRef.current.uniforms;
-    u.uTime.value = state.clock.getElapsedTime();
-    u.uDimension.value = DIMENSION_MAP[currentDimension] ?? 0;
-    u.uDimensionProgress.value = dimensionProgress;
-    u.uMouse.value.set(mousePos.x, mousePos.y);
-    u.uAntiGravity.value = isAntiGravity ? -1.0 : 1.0;
+  useFrame(() => {
+    try {
+      if (!materialRef.current) return;
+      const u = materialRef.current.uniforms;
+      // Only pause uTime if tier is explicitly STATIC
+      if (tierConfig.tier !== 'STATIC') {
+        u.uTime.value = (performance.now() - startTimeRef.current) * 0.001;
+      }
+      u.uDimension.value = DIMENSION_MAP[currentDimension] ?? 0;
+      u.uDimensionProgress.value = dimensionProgress;
+      u.uMouse.value.set(mousePos.x, mousePos.y);
+      u.uAntiGravity.value = isAntiGravity ? -1.0 : 1.0;
+    } catch (err) {
+      console.error('[ParticleSystem useFrame error]', err);
+    }
   });
 
   return (
