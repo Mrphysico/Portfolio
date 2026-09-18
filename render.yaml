@@ -1,0 +1,39 @@
+services:
+  # 1. Frontend: ARTH JADAV - The Dimensional Portfolio (Static Site)
+  - type: web
+    name: arth-jadav-portfolio
+    runtime: static
+    rootDir: web
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    pullRequestPreviewsEnabled: true
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: SAMEORIGIN
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    envVars:
+      - key: NODE_VERSION
+        value: 20.11.0
+
+  # 2. Backend: Python FastAPI Microservice (Optional)
+  - type: web
+    name: arth-jadav-portfolio-api
+    runtime: python
+    rootDir: api-python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8

@@ -61,7 +61,8 @@ interface CameraControllerProps {
   controlsRef: React.RefObject<OrbitControlsImpl>;
   isAutoRotate: boolean;
   onUserInteracted: () => void;
-  setCameraYaw: (yaw: number) => void;
+  compassArrowRef: React.RefObject<HTMLDivElement>;
+  compassTextRef: React.RefObject<HTMLSpanElement>;
 }
 
 const CameraController: React.FC<CameraControllerProps> = ({
@@ -69,7 +70,8 @@ const CameraController: React.FC<CameraControllerProps> = ({
   controlsRef,
   isAutoRotate,
   onUserInteracted,
-  setCameraYaw,
+  compassArrowRef,
+  compassTextRef,
 }) => {
   const { camera } = useThree();
   const targetPos = useRef<THREE.Vector3>(new THREE.Vector3(0.2, 0.4, 3.2));
@@ -99,9 +101,15 @@ const CameraController: React.FC<CameraControllerProps> = ({
       }
     }
 
-    // 2. Track camera yaw for compass gizmo
+    // 2. Track camera yaw for compass gizmo without React state re-renders
     const azimuth = Math.atan2(camera.position.x, camera.position.z);
-    setCameraYaw((azimuth * 180) / Math.PI);
+    const yawDeg = (azimuth * 180) / Math.PI;
+    if (compassArrowRef.current) {
+      compassArrowRef.current.style.transform = `rotate(${-yawDeg}deg)`;
+    }
+    if (compassTextRef.current) {
+      compassTextRef.current.textContent = `${Math.round((yawDeg + 360) % 360)}° YAW`;
+    }
   });
 
   return null;
@@ -117,6 +125,11 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
   isCelebrating,
   isWaving,
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isInView, setIsInView] = useState(true);
+  const compassArrowRef = useRef<HTMLDivElement>(null);
+  const compassTextRef = useRef<HTMLSpanElement>(null);
+
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [hoveredProp, setHoveredProp] = useState<string | null>(null);
 
@@ -126,10 +139,22 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
   const [isExploded, setIsExploded] = useState(false);
   const [quality, setQuality] = useState<WorkshopQuality>('cinematic');
   const [interactionMode, setInteractionMode] = useState<'orbit' | 'interact'>('orbit');
-  const [cameraYaw, setCameraYaw] = useState(0);
 
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // IntersectionObserver to pause rendering when offscreen
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setIsInView(entry.isIntersecting);
+      },
+      { threshold: 0.05 }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
 
   // Track mouse for character eye-tracking
   useEffect(() => {
@@ -167,7 +192,7 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
   };
 
   return (
-    <div className="w-full h-full min-h-[520px] lg:min-h-[640px] relative flex flex-col select-none">
+    <div ref={containerRef} className="w-full h-full min-h-[520px] lg:min-h-[640px] relative flex flex-col select-none">
       {/* ================= TOP CONTROLS & CAMERA PRESETS TOOLBAR ================= */}
       <div className="absolute top-3 left-3 right-3 z-30 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
         {/* Left: Camera Preset Quick Buttons */}
@@ -271,9 +296,11 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
       {/* ================= 3D CANVAS VIEWPORT ================= */}
       <div className="flex-1 w-full h-full relative">
         <Canvas
+          frameloop={isInView ? 'always' : 'never'}
+          dpr={quality === 'cinematic' ? Math.min(typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1, 1.5) : 1}
           shadows={quality !== 'performance'}
           gl={{
-            antialias: true,
+            antialias: quality !== 'performance',
             alpha: true,
             toneMapping: THREE.ACESFilmicToneMapping,
             toneMappingExposure: 1.35,
@@ -307,7 +334,8 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
             controlsRef={controlsRef}
             isAutoRotate={isAutoRotate}
             onUserInteracted={handleUserInteracted}
-            setCameraYaw={setCameraYaw}
+            compassArrowRef={compassArrowRef}
+            compassTextRef={compassTextRef}
           />
 
           {/* ================= LIGHTING & ATMOSPHERE ================= */}
@@ -363,12 +391,13 @@ export const WorkshopCanvas: React.FC<WorkshopCanvasProps> = ({
         {/* Compass / Orientation Gizmo */}
         <div className="absolute bottom-3 right-3 bg-zinc-950/85 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-zinc-800 shadow-xl flex items-center gap-2 pointer-events-none font-mono text-[11px] text-zinc-400">
           <div
+            ref={compassArrowRef}
             className="w-4 h-4 rounded-full border border-cyan-400/50 flex items-center justify-center text-[8px] font-bold text-cyan-300"
-            style={{ transform: `rotate(${-cameraYaw}deg)` }}
+            style={{ transform: 'rotate(0deg)' }}
           >
             ▲
           </div>
-          <span>{Math.round((cameraYaw + 360) % 360)}° YAW</span>
+          <span ref={compassTextRef}>0° YAW</span>
         </div>
 
         {/* Orbit & Interaction Hint (Always 100% visible, never covered by HUD) */}

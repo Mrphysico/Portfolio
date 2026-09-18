@@ -40,6 +40,7 @@ export const DimensionCanvas: React.FC<DimensionCanvasProps> = ({
   return (
     <div className="fixed inset-0 z-0 pointer-events-none">
       <Canvas
+        frameloop={currentDimension === 'Singularity' ? 'never' : 'always'}
         dpr={tierConfig.dpr}
         gl={{
           antialias: tierConfig.tier !== 'LITE' && tierConfig.tier !== 'STATIC',

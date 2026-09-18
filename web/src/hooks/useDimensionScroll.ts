@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Lenis from 'lenis';
 
 export type DimensionKey = '0D' | '1D' | '2D' | '3D' | '4D' | 'Singularity';
@@ -28,17 +28,20 @@ export function useDimensionScroll() {
   });
 
   const [lenisInstance, setLenisInstance] = useState<Lenis | null>(null);
+  const lastProgressRef = useRef<number>(-1);
+  const lastDimRef = useRef<DimensionKey>('0D');
 
   useEffect(() => {
     // Check if user prefers reduced motion
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const lenis = new Lenis({
-      duration: prefersReducedMotion ? 0 : 1.2,
+      duration: prefersReducedMotion ? 0 : 1.1,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: 'vertical',
       gestureOrientation: 'vertical',
       smoothWheel: !prefersReducedMotion,
+      touchMultiplier: 1.5,
     });
 
     setLenisInstance(lenis);
@@ -58,21 +61,29 @@ export function useDimensionScroll() {
         }
       }
 
-      setScrollState({
-        currentDimension: currentDim,
-        progress: p,
-        dimensionProgress: Math.max(0, Math.min(1, dimProg)),
-        velocity: vel,
-      });
+      // Avoid re-renders on sub-pixel micro-jitter unless crossing dimensional boundary or progress > 0.0015
+      const pDiff = Math.abs(p - lastProgressRef.current);
+      if (pDiff >= 0.0015 || currentDim !== lastDimRef.current || p === 0 || p === 1) {
+        lastProgressRef.current = p;
+        lastDimRef.current = currentDim;
+
+        setScrollState({
+          currentDimension: currentDim,
+          progress: p,
+          dimensionProgress: Math.max(0, Math.min(1, dimProg)),
+          velocity: vel,
+        });
+      }
     }
 
     lenis.on('scroll', onScroll);
 
+    let reqId: number;
     function raf(time: number) {
       lenis.raf(time);
-      requestAnimationFrame(raf);
+      reqId = requestAnimationFrame(raf);
     }
-    const reqId = requestAnimationFrame(raf);
+    reqId = requestAnimationFrame(raf);
 
     return () => {
       cancelAnimationFrame(reqId);
@@ -86,7 +97,7 @@ export function useDimensionScroll() {
       const bp = DIMENSION_BREAKPOINTS.find((b) => b.key === dim);
       if (bp) {
         const targetScroll = bp.start * (document.documentElement.scrollHeight - window.innerHeight);
-        lenisInstance.scrollTo(targetScroll, { duration: 1.5 });
+        lenisInstance.scrollTo(targetScroll, { duration: 1.4 });
       }
     },
     [lenisInstance]

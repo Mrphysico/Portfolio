@@ -64,6 +64,21 @@
   .border-glow-cyan {
     box-shadow: 0 0 15px rgba(0, 247, 255, 0.3);
   }
+
+  .chapter-container {
+    content-visibility: auto;
+    contain-intrinsic-size: 800px;
+  }
+}
+
+/* Mobile fill rate optimization: reduce heavy blur and multi-layer shadows */
+@media (max-width: 768px) {
+  .glass-panel,
+  .glass-panel-cyan {
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    box-shadow: none !important;
+  }
 }
 
 /* Accessibility: prefers-reduced-motion overrides */

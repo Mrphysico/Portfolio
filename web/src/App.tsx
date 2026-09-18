@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy, useCallback } from 'react';
 import { useTierDetection, QualityTier } from './hooks/useTierDetection';
 import { useDimensionScroll, DimensionKey } from './hooks/useDimensionScroll';
 import { Navbar } from './components/hud/Navbar';
@@ -6,14 +6,15 @@ import { DimensionMeter } from './components/hud/DimensionMeter';
 import { Preloader0D } from './components/preloader/Preloader0D';
 import { DimensionCanvas } from './components/canvas/DimensionCanvas';
 import { Chapter0D } from './components/chapters/Chapter0D';
-import { Chapter1D } from './components/chapters/Chapter1D';
-import { Chapter2D } from './components/chapters/Chapter2D';
-import { Chapter3D } from './components/chapters/Chapter3D';
-import { Chapter4D } from './components/chapters/Chapter4D';
-import { LanguageGalaxy } from './components/galaxy/LanguageGalaxy';
-import { WorkshopSection } from './components/chapters/WorkshopSection';
-import { CommandPalette } from './components/terminal/CommandPalette';
-import { toneAudio } from './components/audio/ToneAudio';
+
+// Route-level code-splitting: Lazy load chapters and heavy subsystems
+const Chapter1D = lazy(() => import('./components/chapters/Chapter1D').then((m) => ({ default: m.Chapter1D })));
+const Chapter2D = lazy(() => import('./components/chapters/Chapter2D').then((m) => ({ default: m.Chapter2D })));
+const Chapter3D = lazy(() => import('./components/chapters/Chapter3D').then((m) => ({ default: m.Chapter3D })));
+const Chapter4D = lazy(() => import('./components/chapters/Chapter4D').then((m) => ({ default: m.Chapter4D })));
+const LanguageGalaxy = lazy(() => import('./components/galaxy/LanguageGalaxy').then((m) => ({ default: m.LanguageGalaxy })));
+const WorkshopSection = lazy(() => import('./components/chapters/WorkshopSection').then((m) => ({ default: m.WorkshopSection })));
+const CommandPalette = lazy(() => import('./components/terminal/CommandPalette').then((m) => ({ default: m.CommandPalette })));
 
 export function App() {
   const [isPreloaderDone, setIsPreloaderDone] = useState(false);
@@ -25,19 +26,34 @@ export function App() {
   const { config: tierConfig, setTier } = useTierDetection();
   const { currentDimension, progress, dimensionProgress, velocity, scrollToDimension } = useDimensionScroll();
 
-  // Handle audio toggle
-  const handleToggleAudio = async () => {
+  // Handle audio toggle: Lazy load ToneAudio module only on first user gesture
+  const handleToggleAudio = useCallback(async () => {
+    const { toneAudio } = await import('./components/audio/ToneAudio');
     const active = await toneAudio.toggle();
     setIsAudioActive(active);
-  };
+  }, []);
 
-  // Sync scroll velocity to audio filter frequency
+  // Sync scroll velocity to audio filter frequency only when audio is active
   useEffect(() => {
     if (isAudioActive) {
-      const freq = 400 + Math.abs(velocity) * 500 + progress * 800;
-      toneAudio.updateFilter(freq);
+      import('./components/audio/ToneAudio').then(({ toneAudio }) => {
+        const freq = 400 + Math.abs(velocity) * 500 + progress * 800;
+        toneAudio.updateFilter(freq);
+      });
     }
   }, [velocity, progress, isAudioActive]);
+
+  const handleToggleAntiG = useCallback(() => {
+    setIsAntiGravity((prev) => !prev);
+  }, []);
+
+  const handleOpenTerminal = useCallback(() => {
+    setIsTerminalOpen(true);
+  }, []);
+
+  const handleCloseTerminal = useCallback(() => {
+    setIsTerminalOpen(false);
+  }, []);
 
   return (
     <div className={`relative min-h-screen bg-void-950 text-slate-100 overflow-x-hidden ${theme}`}>
@@ -59,8 +75,8 @@ export function App() {
         isAudioActive={isAudioActive}
         onToggleAudio={handleToggleAudio}
         isAntiGravity={isAntiGravity}
-        onToggleAntiGravity={() => setIsAntiGravity(!isAntiGravity)}
-        onOpenTerminal={() => setIsTerminalOpen(true)}
+        onToggleAntiGravity={handleToggleAntiG}
+        onOpenTerminal={handleOpenTerminal}
         onSelectDimension={scrollToDimension}
         theme={theme}
         onChangeTheme={setTheme}
@@ -76,25 +92,43 @@ export function App() {
         onSelectDimension={scrollToDimension}
       />
 
-      {/* 5. Main Semantic Content: Dimensional Chapters (Accessible for screen-readers & crawlers) */}
+      {/* 5. Main Semantic Content: Dimensional Chapters with content-visibility containment */}
       <main id="main-content" className="relative z-10">
         <Chapter0D onExplore={() => scrollToDimension('1D')} />
-        <Chapter1D />
-        <Chapter2D />
-        <Chapter3D />
-        <Chapter4D />
-        <LanguageGalaxy />
-        <WorkshopSection />
+        <Suspense fallback={<div className="min-h-screen" />}>
+          <div className="chapter-container">
+            <Chapter1D />
+          </div>
+          <div className="chapter-container">
+            <Chapter2D />
+          </div>
+          <div className="chapter-container">
+            <Chapter3D />
+          </div>
+          <div className="chapter-container">
+            <Chapter4D />
+          </div>
+          <div className="chapter-container">
+            <LanguageGalaxy />
+          </div>
+          <div className="chapter-container">
+            <WorkshopSection />
+          </div>
+        </Suspense>
       </main>
 
       {/* 6. Interactive Command Palette (Ctrl+K) */}
-      <CommandPalette
-        isOpen={isTerminalOpen}
-        onClose={() => setIsTerminalOpen(false)}
-        onSelectDimension={scrollToDimension}
-        onToggleAntiGravity={() => setIsAntiGravity(!isAntiGravity)}
-        onSelectTier={setTier}
-      />
+      {isTerminalOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette
+            isOpen={isTerminalOpen}
+            onClose={handleCloseTerminal}
+            onSelectDimension={scrollToDimension}
+            onToggleAntiGravity={handleToggleAntiG}
+            onSelectTier={setTier}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

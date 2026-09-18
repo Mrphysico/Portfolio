@@ -12,6 +12,120 @@ interface ParticleSystemProps {
   isAntiGravity: boolean;
 }
 
+const DIMENSION_MAP: Record<DimensionKey, number> = {
+  '0D': 0,
+  '1D': 1,
+  '2D': 2,
+  '3D': 3,
+  '4D': 4,
+  'Singularity': 5,
+};
+
+const vertexShader = /* glsl */ `
+  attribute vec3 aRandom;
+  uniform float uTime;
+  uniform float uDimension;
+  uniform float uDimensionProgress;
+  uniform vec2 uMouse;
+  uniform float uAntiGravity;
+  uniform float uPointSize;
+
+  varying vec3 vColor;
+
+  void main() {
+    vColor = color;
+    vec3 bp = position;
+
+    // 0D Point: collapse tightly to origin with slight quantum jitter
+    vec3 p0 = (bp * 0.02) + vec3(
+      sin(uTime * 5.0 + aRandom.x * 6.28318) * 0.05,
+      cos(uTime * 5.0 + aRandom.y * 6.28318) * 0.05,
+      bp.z * 0.02
+    );
+
+    // 1D Line: collapse Y and Z onto horizontal X-axis laser line
+    vec3 p1 = vec3(
+      bp.x * 1.8,
+      sin(bp.x * 3.0 + uTime * 2.0) * 0.15,
+      0.0
+    );
+
+    // 2D Plane: flatten Z onto XY origami plane with wave ripples
+    vec3 p2 = vec3(
+      bp.x * 1.2,
+      bp.y * 1.2,
+      sin(bp.x * 2.0 + bp.y * 2.0 + uTime * 1.5) * 0.2
+    );
+
+    // 3D Space: highway grid and street volume
+    vec3 p3 = vec3(
+      bp.x * 1.1,
+      bp.y * 0.8,
+      bp.z * 1.1
+    );
+
+    // 4D Hyperspace: hypercube cage rotation and rig particles
+    float angle = uTime * 0.4;
+    vec3 p4 = vec3(
+      bp.x * cos(angle) - bp.z * sin(angle),
+      bp.y + sin(uTime + bp.x) * 0.3,
+      bp.x * sin(angle) + bp.z * cos(angle)
+    );
+
+    // Singularity: spiral into black hole event horizon
+    float dist = length(bp.xy);
+    float spiralAngle = uTime * 2.0 + (1.0 / (dist + 0.1)) * 3.0;
+    float spiralRadius = max(0.1, dist * 0.4);
+    vec3 p5 = vec3(
+      cos(spiralAngle) * spiralRadius,
+      sin(spiralAngle) * spiralRadius,
+      (bp.z * 0.1) * sin(spiralAngle)
+    );
+
+    // Select target based on active dimension
+    vec3 target = p0;
+    if (uDimension < 0.5) {
+      target = p0;
+    } else if (uDimension < 1.5) {
+      target = mix(p0, p1, uDimensionProgress);
+    } else if (uDimension < 2.5) {
+      target = mix(p1, p2, uDimensionProgress);
+    } else if (uDimension < 3.5) {
+      target = mix(p2, p3, uDimensionProgress);
+    } else if (uDimension < 4.5) {
+      target = mix(p3, p4, uDimensionProgress);
+    } else {
+      target = mix(p4, p5, uDimensionProgress);
+    }
+
+    // Cursor gravity well
+    vec2 m = uMouse * 5.0;
+    float distToMouse = length(m - target.xy);
+    if (distToMouse < 2.5) {
+      float force = (1.0 - distToMouse / 2.5) * 1.8 * uAntiGravity;
+      vec2 dir = normalize(m - target.xy + vec2(0.0001));
+      target.xy += dir * force;
+    }
+
+    vec4 mvPosition = modelViewMatrix * vec4(target, 1.0);
+    gl_PointSize = uPointSize * (300.0 / -mvPosition.z);
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`;
+
+const fragmentShader = /* glsl */ `
+  varying vec3 vColor;
+
+  void main() {
+    // Soft circular particle shape
+    vec2 coord = gl_PointCoord - vec2(0.5);
+    float dist = length(coord);
+    if (dist > 0.5) discard;
+    float alpha = smoothstep(0.5, 0.05, dist) * 0.85;
+    gl_FragColor = vec4(vColor, alpha);
+  }
+`;
+
 export const ParticleSystem: React.FC<ParticleSystemProps> = ({
   currentDimension,
   dimensionProgress,
@@ -20,13 +134,14 @@ export const ParticleSystem: React.FC<ParticleSystemProps> = ({
   isAntiGravity,
 }) => {
   const pointsRef = useRef<THREE.Points>(null);
+  const materialRef = useRef<THREE.ShaderMaterial>(null);
   const count = tierConfig.particleCount;
 
-  // Initialize particle positions and target geometries
-  const { positions, basePositions, colors } = useMemo(() => {
+  // Initialize particle base positions, colors, and random factors
+  const { positions, colors, randoms } = useMemo(() => {
     const pos = new Float32Array(count * 3);
-    const basePos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
+    const rnd = new Float32Array(count * 3);
 
     for (let i = 0; i < count; i++) {
       const i3 = i * 3;
@@ -37,17 +152,13 @@ export const ParticleSystem: React.FC<ParticleSystemProps> = ({
       const phi = Math.acos(2.0 * v - 1.0);
       const r = Math.cbrt(Math.random()) * 8;
 
-      const x = r * Math.sin(phi) * Math.cos(theta);
-      const y = r * Math.sin(phi) * Math.sin(theta);
-      const z = r * Math.cos(phi);
+      pos[i3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i3 + 2] = r * Math.cos(phi);
 
-      pos[i3] = x;
-      pos[i3 + 1] = y;
-      pos[i3 + 2] = z;
-
-      basePos[i3] = x;
-      basePos[i3 + 1] = y;
-      basePos[i3 + 2] = z;
+      rnd[i3] = Math.random();
+      rnd[i3 + 1] = Math.random();
+      rnd[i3 + 2] = Math.random();
 
       // High-tech Cyan/Purple/Orange spectrum
       const colorMix = Math.random();
@@ -66,89 +177,31 @@ export const ParticleSystem: React.FC<ParticleSystemProps> = ({
       }
     }
 
-    return { positions: pos, basePositions: basePos, colors: col };
+    return { positions: pos, colors: col, randoms: rnd };
   }, [count]);
 
-  // Frame loop: compute curl-noise drift, shape morphing, and cursor gravity well
-  useFrame((state, delta) => {
-    if (!pointsRef.current) return;
-    const geometry = pointsRef.current.geometry;
-    const posAttr = geometry.attributes.position as THREE.BufferAttribute;
-    const posArr = posAttr.array as Float32Array;
+  // Static uniforms object created once with calibrated point size to eliminate overdraw
+  const uniforms = useMemo(
+    () => ({
+      uTime: { value: 0 },
+      uDimension: { value: 0 },
+      uDimensionProgress: { value: 0 },
+      uMouse: { value: new THREE.Vector2(0, 0) },
+      uAntiGravity: { value: 1.0 },
+      uPointSize: { value: tierConfig.tier === 'ULTRA' ? 0.035 : 0.045 },
+    }),
+    [tierConfig.tier]
+  );
 
-    const time = state.clock.getElapsedTime();
-    const gravityFactor = isAntiGravity ? -1.0 : 1.0;
-    const mx = mousePos.x * 5;
-    const my = mousePos.y * 5;
-
-    for (let i = 0; i < count; i++) {
-      const i3 = i * 3;
-      let bx = basePositions[i3];
-      let by = basePositions[i3 + 1];
-      let bz = basePositions[i3 + 2];
-
-      // Dimensional Shape Morphing Targets
-      let targetX = bx;
-      let targetY = by;
-      let targetZ = bz;
-
-      if (currentDimension === '0D') {
-        // 0D Point: collapse tightly to origin with slight quantum jitter
-        targetX = (bx * 0.02) + Math.sin(time * 5 + i) * 0.05;
-        targetY = (by * 0.02) + Math.cos(time * 5 + i) * 0.05;
-        targetZ = (bz * 0.02);
-      } else if (currentDimension === '1D') {
-        // 1D Line: collapse Y and Z onto horizontal X-axis laser line
-        targetX = bx * 1.8;
-        targetY = Math.sin(bx * 3.0 + time * 2.0) * 0.15;
-        targetZ = 0.0;
-      } else if (currentDimension === '2D') {
-        // 2D Plane: flatten Z onto XY origami plane with wave ripples
-        targetX = bx * 1.2;
-        targetY = by * 1.2;
-        targetZ = Math.sin(bx * 2.0 + by * 2.0 + time * 1.5) * 0.2;
-      } else if (currentDimension === '3D') {
-        // 3D Space: highway grid and street volume
-        targetX = bx * 1.1;
-        targetY = by * 0.8;
-        targetZ = bz * 1.1;
-      } else if (currentDimension === '4D') {
-        // 4D Hyperspace: hypercube cage rotation and rig particles
-        const angle = time * 0.4;
-        targetX = bx * Math.cos(angle) - bz * Math.sin(angle);
-        targetY = by + Math.sin(time + bx) * 0.3;
-        targetZ = bx * Math.sin(angle) + bz * Math.cos(angle);
-      } else if (currentDimension === 'Singularity') {
-        // Singularity: spiral into black hole event horizon
-        const dist = Math.hypot(bx, by);
-        const spiralAngle = time * 2.0 + (1.0 / (dist + 0.1)) * 3.0;
-        const spiralRadius = Math.max(0.1, dist * 0.4);
-        targetX = Math.cos(spiralAngle) * spiralRadius;
-        targetY = Math.sin(spiralAngle) * spiralRadius;
-        targetZ = (bz * 0.1) * Math.sin(spiralAngle);
-      }
-
-      // Cursor gravity well (attracts or repels)
-      const dx = mx - posArr[i3];
-      const dy = my - posArr[i3 + 1];
-      const distToMouse = Math.hypot(dx, dy);
-
-      let mouseForceX = 0;
-      let mouseForceY = 0;
-      if (distToMouse < 2.5) {
-        const force = (1.0 - distToMouse / 2.5) * 1.8 * gravityFactor;
-        mouseForceX = (dx / (distToMouse + 0.01)) * force;
-        mouseForceY = (dy / (distToMouse + 0.01)) * force;
-      }
-
-      // Smooth lerp toward target position
-      const lerpSpeed = Math.min(delta * 4.0, 0.2);
-      posArr[i3] += (targetX + mouseForceX - posArr[i3]) * lerpSpeed;
-      posArr[i3 + 1] += (targetY + mouseForceY - posArr[i3 + 1]) * lerpSpeed;
-      posArr[i3 + 2] += (targetZ - posArr[i3 + 2]) * lerpSpeed;
-    }
-
-    posAttr.needsUpdate = true;
+  // Fast uniform updates in RAF loop - 0 CPU math, 0 buffer re-uploads
+  useFrame((state) => {
+    if (!materialRef.current) return;
+    const u = materialRef.current.uniforms;
+    u.uTime.value = state.clock.getElapsedTime();
+    u.uDimension.value = DIMENSION_MAP[currentDimension] ?? 0;
+    u.uDimensionProgress.value = dimensionProgress;
+    u.uMouse.value.set(mousePos.x, mousePos.y);
+    u.uAntiGravity.value = isAntiGravity ? -1.0 : 1.0;
   });
 
   return (
@@ -162,12 +215,18 @@ export const ParticleSystem: React.FC<ParticleSystemProps> = ({
           attach="attributes-color"
           args={[colors, 3]}
         />
+        <bufferAttribute
+          attach="attributes-aRandom"
+          args={[randoms, 3]}
+        />
       </bufferGeometry>
-      <pointsMaterial
-        size={tierConfig.tier === 'ULTRA' ? 0.035 : 0.045}
+      <shaderMaterial
+        ref={materialRef}
+        vertexShader={vertexShader}
+        fragmentShader={fragmentShader}
+        uniforms={uniforms}
         vertexColors
         transparent
-        opacity={0.85}
         blending={THREE.AdditiveBlending}
         depthWrite={false}
       />

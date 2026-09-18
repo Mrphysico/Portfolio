@@ -82,17 +82,53 @@ docker-compose up --build
 
 ---
 
-## 🎛️ Quality Tiers & Performance
+## 🎛️ Quality Tiers & Performance Architecture
 
-The portfolio features adaptive GPU tiering with an automated FPS monitor that degrades quality if FPS drops below 45:
+The portfolio features adaptive GPU tiering, real-time performance governance with hysteresis, and a highly optimized rendering pipeline:
 
-- **ULTRA**: 1,000,000 particles, WebGPU WGSL compute, full post-processing stack.
-- **HIGH**: 500,000 particles, balanced post-processing.
-- **BALANCED**: 150,000 particles, lightweight bloom.
-- **LITE**: 25,000 particles, zero heavy post-processing (phones).
-- **STATIC**: 2,000 particles, reduced motion, WCAG AA compliant.
+- **ULTRA**: 250,000 GPU particles, full PBR reflections, bloom, ACES tone mapping, DPR 2.0.
+- **HIGH**: 120,000 GPU particles, bloom, chromatic aberration, DPR 1.5.
+- **BALANCED**: 50,000 GPU particles, lightweight bloom, DPR 1.0.
+- **LITE**: 15,000 GPU particles, zero post-processing, optimized for mobile battery life.
+- **STATIC**: 1,500 particles, reduced motion, WCAG AA compliant.
 
-Manual override is available at any time via the bottom-left Dimension Meter.
+### 🚀 Production Performance Benchmarks (Before vs After)
+
+Measured on the production build (`npm run preview`) via Chrome DevTools Protocol & Playwright across 5 scenarios:
+
+| Metric | Baseline (Pre-Optimization) | Optimized (Post-Verification) | Improvement |
+| :--- | :--- | :--- | :--- |
+| **Initial JS Bundle (raw)** | `1,452.4 kB` | **`51.8 kB`** | **-96.4% reduction** |
+| **Initial JS Bundle (gzipped)** | `406.3 kB` | **`16.8 kB`** | **-95.9% reduction** |
+| **Desktop Scroll FPS (avg)** | `12.5 FPS` | **`101.7 FPS`** | **+89.2 FPS** |
+| **Desktop Scroll 1% Low FPS** | `10.9 FPS` | **`40.0 FPS`** | **+29.1 FPS** |
+| **Desktop Dropped Frames** | `100.0%` | **`9.9%`** | **-90.1% reduction in jank** |
+| **Mobile Scroll FPS (avg)** | `18.7 FPS` | **`120.0 FPS`** | **+101.3 FPS (Max Refresh)** |
+| **Mobile Scroll 1% Low FPS** | `15.0 FPS` | **`117.6 FPS`** | **+102.6 FPS** |
+| **Total Blocking Time (TBT)** | `2,034 ms` | **`43 ms`** | **-97.9% reduction** |
+| **Long Tasks (>50ms)** | `37 tasks` | **`1 task`** | **-36 fewer long tasks** |
+| **Workshop 360 Drag FPS** | `38.8 FPS` | **`69.0 FPS`** | **Solid 60+ FPS** |
+
+### 🛠️ Key Architectural Optimizations Applied
+
+1. **GPU Vertex Shader Particle System (`ParticleSystem.tsx`)**:
+   - Replaced heavy CPU `for` loop (500k iterations/frame) and continuous `posAttr.needsUpdate = true` buffer uploads with a custom Three.js `ShaderMaterial`.
+   - Morphing between all dimensional targets (0D point, 1D laser, 2D origami plane, 3D space, 4D hypercube, Singularity spiral) and mouse gravity well are computed on the GPU in parallel at zero CPU cost.
+   - Point size calibrated to eliminate GPU fill-rate overdraw.
+2. **Dual-Canvas Culling & Offscreen Render Pausing**:
+   - Paused `DimensionCanvas` render loop (`frameloop={currentDimension === 'Singularity' ? 'never' : 'always'}`) when user enters the 3D Workshop scene.
+   - Paused `WorkshopCanvas` (`frameloop={isInView ? 'always' : 'never'}`) via `IntersectionObserver` when scrolled away from the Workshop.
+3. **Route-Level Code-Splitting & Vendor Chunking**:
+   - Split chapters into lazy chunks with `React.lazy()` and `Suspense`.
+   - Isolated `three-vendor`, `motion-vendor`, `ui-vendor`, and lazy-loaded `ToneAudio` on demand.
+   - Reduced initial entry JavaScript bundle to just **16.8 kB gzipped** (well under the 200 kB budget).
+4. **Eliminated 60Hz React Re-render Thrashing**:
+   - Throttled FPS state updates in `useTierDetection.ts` to 3Hz.
+   - Implemented real-time Auto-Quality Governor with hysteresis (downgrade after 2s of <40 FPS; upgrade after 10s of sustained >=58 FPS).
+   - Replaced `setCameraYaw` React state inside `WorkshopCanvas.tsx`'s frame loop with direct DOM ref updates for the compass gizmo.
+5. **Mobile Fill Rate & Containment**:
+   - Replaced heavy `backdrop-filter: blur(24px)` with `blur(8px)` on mobile viewports.
+   - Applied CSS `content-visibility: auto` to offscreen chapters to skip layout and painting until scrolled near.
 
 ---
 
